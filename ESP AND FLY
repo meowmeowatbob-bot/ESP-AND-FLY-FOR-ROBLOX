@@ -131,4 +131,49 @@ RunService.RenderStepped:Connect(function()
 end)
 
 -- Reset on death
-humanoid.Died:Connect(stopFly)
+humanoid.Died:Connect(stopFly)   GUI:local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Debris = game:GetService("Debris")
+
+local KillAllEvent = ReplicatedStorage:WaitForChild("KillAllEvent")
+local FlingAllEvent = ReplicatedStorage:WaitForChild("FlingAllEvent")
+
+-- CHANGE TO YOUR USER ID
+local ADMIN_USER_ID = 123456789
+
+-- Kill All
+KillAllEvent.OnServerEvent:Connect(function(player)
+	if player.UserId ~= ADMIN_USER_ID then return end
+
+	for _, plr in ipairs(Players:GetPlayers()) do
+		if plr ~= player and plr.Character then
+			local hum = plr.Character:FindFirstChild("Humanoid")
+			if hum then
+				hum.Health = 0
+			end
+		end
+	end
+end)
+
+-- Fling All
+FlingAllEvent.OnServerEvent:Connect(function(player)
+	if player.UserId ~= ADMIN_USER_ID then return end
+
+	for _, plr in ipairs(Players:GetPlayers()) do
+		if plr ~= player and plr.Character then
+			local root = plr.Character:FindFirstChild("HumanoidRootPart")
+			if root then
+				local bv = Instance.new("BodyVelocity")
+				bv.MaxForce = Vector3.new(1e9, 1e9, 1e9)
+				bv.Velocity = Vector3.new(
+					math.random(-3000, 3000),
+					2000,
+					math.random(-3000, 3000)
+				)
+				bv.Parent = root
+				Debris:AddItem(bv, 0.3)
+			end
+		end
+	end
+end)
+
