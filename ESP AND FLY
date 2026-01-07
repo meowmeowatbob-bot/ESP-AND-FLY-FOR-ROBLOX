@@ -1,0 +1,134 @@
+ESP AND FLY CODE LUA          :local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+
+-- SETTINGS
+local ESP_COLOR = Color3.fromRGB(255, 0, 0)
+local OUTLINE_COLOR = Color3.fromRGB(255, 255, 255)
+
+-- Create ESP for character
+local function createESP(character, player)
+	if player == LocalPlayer then return end
+	if character:FindFirstChild("ESPHighlight") then return end
+
+	local highlight = Instance.new("Highlight")
+	highlight.Name = "ESPHighlight"
+	highlight.FillColor = ESP_COLOR
+	highlight.OutlineColor = OUTLINE_COLOR
+	highlight.FillTransparency = 0.5
+	highlight.OutlineTransparency = 0
+	highlight.Adornee = character
+	highlight.Parent = character
+end
+
+-- Apply ESP to existing players
+for _, player in ipairs(Players:GetPlayers()) do
+	if player ~= LocalPlayer then
+		if player.Character then
+			createESP(player.Character, player)
+		end
+		player.CharacterAdded:Connect(function(char)
+			createESP(char, player)
+		end)
+	end
+end
+
+-- Apply ESP to new players
+Players.PlayerAdded:Connect(function(player)
+	player.CharacterAdded:Connect(function(char)
+		createESP(char, player)
+	end)
+end)
+local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+
+local player = Players.LocalPlayer
+local character = player.Character or player.CharacterAdded:Wait()
+local humanoid = character:WaitForChild("Humanoid")
+local root = character:WaitForChild("HumanoidRootPart")
+
+-- SETTINGS
+local FLY_SPEED = 60
+local flying = false
+
+local bodyGyro
+local bodyVelocity
+
+-- Start flying
+local function startFly()
+	if flying then return end
+	flying = true
+
+	humanoid.PlatformStand = true
+
+	bodyGyro = Instance.new("BodyGyro")
+	bodyGyro.P = 9000
+	bodyGyro.MaxTorque = Vector3.new(9e9, 9e9, 9e9)
+	bodyGyro.CFrame = root.CFrame
+	bodyGyro.Parent = root
+
+	bodyVelocity = Instance.new("BodyVelocity")
+	bodyVelocity.MaxForce = Vector3.new(9e9, 9e9, 9e9)
+	bodyVelocity.Velocity = Vector3.zero
+	bodyVelocity.Parent = root
+end
+
+-- Stop flying
+local function stopFly()
+	flying = false
+
+	humanoid.PlatformStand = false
+
+	if bodyGyro then bodyGyro:Destroy() end
+	if bodyVelocity then bodyVelocity:Destroy() end
+end
+
+-- Toggle flight
+UserInputService.InputBegan:Connect(function(input, gpe)
+	if gpe then return end
+	if input.KeyCode == Enum.KeyCode.F then
+		if flying then
+			stopFly()
+		else
+			startFly()
+		end
+	end
+end)
+
+-- Flight movement
+RunService.RenderStepped:Connect(function()
+	if not flying then return end
+
+	local camera = workspace.CurrentCamera
+	bodyGyro.CFrame = camera.CFrame
+
+	local moveDirection = Vector3.zero
+
+	if UserInputService:IsKeyDown(Enum.KeyCode.W) then
+		moveDirection += camera.CFrame.LookVector
+	end
+	if UserInputService:IsKeyDown(Enum.KeyCode.S) then
+		moveDirection -= camera.CFrame.LookVector
+	end
+	if UserInputService:IsKeyDown(Enum.KeyCode.A) then
+		moveDirection -= camera.CFrame.RightVector
+	end
+	if UserInputService:IsKeyDown(Enum.KeyCode.D) then
+		moveDirection += camera.CFrame.RightVector
+	end
+	if UserInputService:IsKeyDown(Enum.KeyCode.Space) then
+		moveDirection += Vector3.new(0, 1, 0)
+	end
+	if UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) then
+		moveDirection -= Vector3.new(0, 1, 0)
+	end
+
+	if moveDirection.Magnitude > 0 then
+		bodyVelocity.Velocity = moveDirection.Unit * FLY_SPEED
+	else
+		bodyVelocity.Velocity = Vector3.zero
+	end
+end)
+
+-- Reset on death
+humanoid.Died:Connect(stopFly)
